@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    namespace: development-monitoring
+    name: kibana-config
+    labels:
+        app: kibana
+data:
+    kibana.yml: |-
+        server.host: 0.0.0.0
+
+        elasticsearch:
+          hosts: ["${ELASTICSEARCH_HOSTS}"]
+          username: ${ELASTICSEARCH_USER}
+          password: ${ELASTICSEARCH_PASSWORD}
+---
+apiVersion: v1 
+kind: Service
+metadata:
+    namespace: development-monitoring
+    name: kibana
+    labels:
+        app: kibana
+spec:
+    type: NodePort
+    ports:
+    -   name: web
+        port: 5601
+        protocol: TCP
+        targetPort: 5601
+    selector:
+        app: kibana
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    namespace: development-monitoring
+    name: kibana
+    labels:
+        app: kibana
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: kibana
+    template:
+        metadata:
+            labels:
+                app: kibana
+        spec:
+            containers:
+            -   name: kibana
+                image: docker.elastic.co/kibana/kibana:7.5.1
+                ports:
+                -   containerPort: 5601
+                    name: web
+                # resources:
+                #     limits:
+                #         cpu: 1000m
+                #         memory: 2000Mi
+                #     requests:
+                #         cpu: 500m
+                #         memory: 1000Mi
+                readinessProbe:
+                    httpGet:
+                        path: /status
+                        port: 5601
+                    initialDelaySeconds: 60
+                    periodSeconds: 10
+                env:
+                -   name: ELASTICSEARCH_HOSTS
+                    value: http://elasticsearch.development-monitoring:9200
+                -   name: ELASTICSEARCH_USER
+                    value: kibana
+                -   name: ELASTICSEARCH_PASSWORD
+                    valueFrom:
+                        secretKeyRef:
+                            name: kibana-pw-elastic
+                            key: password
+                volumeMounts:
+                -   name: config
+                    mountPath: /usr/share/kibana/config/kibana.yml
+                    readOnly: true  
+                    subPath: kibana.yml
+            volumes:
+            -   name: config
+                configMap:
+                    name: kibana-config
+---

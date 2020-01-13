@@ -1,0 +1,33 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+    name: traefik-ingress-route-web
+    namespace: development-monitoring
+spec:
+    entryPoints:
+        -   web
+    routes:
+    -   match: Host('example.org') && PathPrefix(`notls`)
+        kind: Rule
+        services:
+        -   name: elasticsearch-client-service
+            port: 9200
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+    name: traefik-ingress-route-websecure
+    namespace: development-monitoring
+spec:
+    entryPoints:
+        -   web-secure
+    routes:
+    -   match:  Host('example.org') && PathPrefix(`tls`)
+        kind: Rule
+        services:
+        -   name: elasticsearch-client
+            port: 9200
+    tls:
+        certResolver: default
+---
