@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat-pvc
     labels:
         app: filebeat
@@ -17,7 +17,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat-config
     labels:
         app: filebeat
@@ -77,7 +77,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat-indice-lifecycle
     labels:
         app: filebeat
@@ -107,7 +107,7 @@ data:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat
     labels:
         app: filebeat
@@ -130,11 +130,11 @@ spec:
                 ]
                 env:
                 -   name: ELASTICSEARCH_HOST
-                    value: htt://elasticsearch.development-monitoring:9200
+                    value: htt://elasticsearch.staging-monitoring:9200
                 -   name: ELASTICSEARCH_USERNAME
                     value: elastic
                 -   name: KIBANA_HOST
-                    value: http://kibana.development-monitoring:5601
+                    value: http://kibana.staging-monitoring:5601
                 -   name: ELASTICSEARCH_PASSWORD
                     valueFrom:
                         secretKeyRef:
@@ -196,12 +196,12 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat
 subjects:
 -   kind: ServiceAccount
     name: filebeat
-    namespace: development-monitoring
+    namespace: staging-monitoring
 roleRef:
     kind: ClusterRole
     name: filebeat
@@ -210,7 +210,7 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat
     labels:
       app: filebeat
@@ -227,7 +227,7 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: filebeat
     labels:
         app: filebeat

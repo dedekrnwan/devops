@@ -1,0 +1,24 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: elasticsearch-curator
+  namespace: development-monitoring
+  labels:
+    k8s-app: elasticsearch-client
+spec:
+  schedule: "0 0 */31 * *" #“At 00:00 on every 31st day-of-month.”
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: elasticsearch-curator
+          labels:
+            k8s-app: elasticsearch-client
+        spec:
+          restartPolicy: "Never"
+          containers:
+          - name: ingestor
+            image: python:3.6-alpine
+            #API Docs:https://curator.readthedocs.io/en/latest/
+            args: ["sh", "-c", "pip install elasticsearch-curator && curator_cli --host elasticsearch-client.development-monitoring --port 9200 --http_auth elastic:NNBdF1DS9CIKpBnuRP2T delete_indices --ignore_empty_list --filter_list '[{\"filtertype\":\"pattern\",\"kind\":\"prefix\",\"value\":\"apm-7\"}]'"]
+      backoffLimit: 1

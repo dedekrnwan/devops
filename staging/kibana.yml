@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: kibana-config
     labels:
         app: kibana
@@ -18,7 +18,7 @@ data:
 apiVersion: v1 
 kind: Service
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: kibana
     labels:
         app: kibana
@@ -35,7 +35,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-    namespace: development-monitoring
+    namespace: staging-monitoring
     name: kibana
     labels:
         app: kibana
@@ -70,7 +70,7 @@ spec:
                     periodSeconds: 10
                 env:
                 -   name: ELASTICSEARCH_HOSTS
-                    value: http://elasticsearch.development-monitoring:9200
+                    value: http://elasticsearch.staging-monitoring:9200
                 -   name: ELASTICSEARCH_USER
                     value: kibana
                 -   name: ELASTICSEARCH_PASSWORD

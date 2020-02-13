@@ -18,24 +18,25 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
     namespace: development-monitoring
-    name: packetbeat
+    name: packetbeat-config
     labels:
         app: packetbeat
 data:
     packetbeat.yml: |-
-        setup.dashboard.enabled: true
-        setup.template.enabled: true
+        setup.dashboards.enabled: true
 
-        setup.template.settings:
-            index.number_of_shards: 2
-        
-        packetbeat.interfaces.device: anu
+        setup.template:
+            name: 'packetbeat'
+            pattern: 'packetbeat-*'
+            enabled: true
+
+        packetbeat.interfaces.device: any
 
         packetbeat.protocols:
         -   type: dns
             ports: [53]
             include_authorities: true
-            include_additionals:true
+            include_additionals: true
 
         -   type: http
             ports: [80,8000,8080,9200]
@@ -44,7 +45,7 @@ data:
             ports: [3306]
         
         -   type: redis
-            ports: [3306]
+            ports: [6379]
             
         -   type: tls
             ports: [443, 993, 995, 5223, 8443, 8883, 9243]
@@ -54,27 +55,28 @@ data:
             period: 10s
 
         processors:
-            -   add_cloud_metadata:
-            -   add_kubernetes_metada:
-                    host: ${HOST_NAME}
-                    indexers:
-                    -   ip_port:
-                    matchers:
-                    -   field_format:
-                            format: '%{[ip]}:${[port]}'
-        # cloud.ath: elastic:${ELASTIC_PASSWORD}
-        # cloud.id: ${CLOUD_ID}
+        -   add_kubernetes_metadata:
+                in_cluster: true
 
         output.elasticsearch:
             hosts: ["${ELASTICSEARCH_HOST}"]
             username: ${ELASTICSEARCH_USERNAME}
             password: ${ELASTICSEARCH_PASSWORD}
+            index: packetbeat
+            compression_level: 0
 
         setup.kibana:
             host: ${KIBANA_HOST} 
+        loging:
+            to_files: true
+            files:
+                path: /var/log/packetbeat
+                name: packetbeat.log
+                rotateeverybytes: 10485760 # = 10MB
+                keepfiles: 7
 ---
-apiVersion: extensions/v1beta1
-kind: DaemonSet
+apiVersion: apps/v1
+kind: Deployment
 metadata:
     name: packetbeat
     namespace: development-monitoring
@@ -92,6 +94,7 @@ spec:
             serviceAccountName: packetbeat
             terminationGracePeriodSeconds: 30
             hostNetwork: true
+            dnsPolicy: ClusterFirstWithHostNet
             containers:
             -   name: packetbeat
                 image: docker.elastic.co/beats/packetbeat:7.5.1
@@ -107,7 +110,7 @@ spec:
                         -   NET_ADMIN
                 env:
                 -   name: ELASTICSEARCH_HOST
-                    value: http://elasticsearch.development-monitoring:9200
+                    value: elasticsearch-client.development-monitoring:9200
                 -   name: ELASTICSEARCH_USERNAME
                     value: elastic
                 -   name: ELASTICSEARCH_PASSWORD
@@ -116,7 +119,13 @@ spec:
                             name: elasticsearch-pw-elastic
                             key: password
                 -   name: KIBANA_HOST
-                    value: http://kibana.development-monitoring:5601
+                    value: kibana.development-monitoring:5601
+                resources:
+                    limits:
+                        memory: 200Mi
+                    requests:
+                        cpu: 100m
+                        memory: 100Mi
                 volumeMounts:
                 -   name: config
                     mountPath: /etc/packetbeat.yml
@@ -169,3 +178,12 @@ rules:
     - statefulsets
     - deployments
     verbs: ["get", "list", "watch"] 
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: development-monitoring
+  name: packetbeat
+  labels:
+    app: packetbeat
+---
